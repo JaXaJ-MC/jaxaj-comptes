@@ -1,0 +1,8 @@
+gesdinet_jwt_refresh_token:
+    refresh_token_class: App\Entity\JetonRenouvellement
+    ttl: 2592000          # 30 jours
+    single_use: true      # chaque renouvellement remplace le jeton
+    token_parameter_name: refresh_token
+    hash_tokens:
+        enabled: true     # seule l'empreinte est stockée
+        accept_stored_in_the_clear: false

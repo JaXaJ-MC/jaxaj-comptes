@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+{% block contenu %}
+<h1>{{ titre }}</h1>
+<p class="doux">Compte : {{ email }}</p>
+<form method="post">
+  <label for="mdp">Mot de passe</label>
+  <input id="mdp" type="password" name="mot_de_passe" minlength="{{ longueur }}" required autocomplete="new-password">
+  <label for="conf">Confirmation</label>
+  <input id="conf" type="password" name="confirmation" minlength="{{ longueur }}" required autocomplete="new-password">
+  <p class="doux">Au moins {{ longueur }} caractères. Une phrase de plusieurs mots fait un bon mot de passe.</p>
+  {% if erreur %}<p class="erreur">{{ erreur }}</p>{% endif %}
+  <button type="submit">Enregistrer</button>
+</form>
+{% endblock %}

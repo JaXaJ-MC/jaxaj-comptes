@@ -1,0 +1,14 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+# Chemins traités par les authentificateurs du pare-feu « connexion » : pas de contrôleur.
+api_connexion:
+    path: /api/connexion
+    methods: [POST]
+
+api_connexion_renouveler:
+    path: /api/connexion/renouveler
+    methods: [POST]

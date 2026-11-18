@@ -1,0 +1,16 @@
+#!/bin/bash
+# Prépare l'environnement de test : clés JWT de test et base jaxaj_test.
+# La connexion PostgreSQL vient des variables PGHOST, PGPORT, PGUSER (et PGPASSWORD).
+#   PGHOST=127.0.0.1 PGPORT=5432 PGUSER=postgres bin/preparer-tests
+set -euo pipefail
+cd "$(dirname "$0")/.."
+MEMBRES=${MEMBRES:-../jaxaj-membres}
+
+APP_ENV=test php bin/console lexik:jwt:generate-keypair --skip-if-exists -q
+
+dropdb --if-exists jaxaj_test
+createdb jaxaj_test
+for f in "$MEMBRES/sql/01_schema.sql" "$MEMBRES/sql/02_reference.sql" sql/01_schema.sql; do
+  psql -X -q -v ON_ERROR_STOP=1 -d jaxaj_test -f "$f" >/dev/null
+done
+echo "Base jaxaj_test prête."
