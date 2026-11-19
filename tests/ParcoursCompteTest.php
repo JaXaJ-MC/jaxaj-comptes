@@ -97,12 +97,30 @@ class ParcoursCompteTest extends WebTestCase
         self::assertSame('jean@example.org', $moi['email']);
         self::assertNotNull($moi['derniere_connexion']);
 
-        // Renouvellement : le jeton de renouvellement ne sert qu'une fois.
-        $this->client->jsonRequest('POST', '/api/connexion/renouveler', ['refresh_token' => $reponse['refresh_token']]);
+        // Le jeton de renouvellement est dans un cookie HttpOnly, pas dans la réponse.
+        self::assertArrayNotHasKey('refresh_token', $reponse);
+        $cookie = $this->client->getCookieJar()->get('refresh_token', '/api/connexion');
+        self::assertNotNull($cookie);
+        self::assertTrue($cookie->isHttpOnly());
+        self::assertSame('strict', strtolower($cookie->getSameSite()));
+
+        // Renouvellement par le cookie ; l'ancien jeton ne sert plus.
+        $this->client->request('POST', '/api/connexion/renouveler');
         self::assertResponseIsSuccessful();
-        $nouveau = json_decode($this->client->getResponse()->getContent(), true);
-        self::assertNotSame($reponse['refresh_token'], $nouveau['refresh_token']);
-        $this->client->jsonRequest('POST', '/api/connexion/renouveler', ['refresh_token' => $reponse['refresh_token']]);
+        self::assertArrayHasKey('token', json_decode($this->client->getResponse()->getContent(), true));
+        $nouveau = $this->client->getCookieJar()->get('refresh_token', '/api/connexion');
+        self::assertNotSame($cookie->getValue(), $nouveau->getValue());
+        $this->client->getCookieJar()->set($cookie);
+        $this->client->request('POST', '/api/connexion/renouveler');
+        self::assertResponseStatusCodeSame(401);
+
+        // Déconnexion : le jeton est invalidé et le cookie effacé.
+        $this->client->getCookieJar()->set($nouveau);
+        $this->client->request('POST', '/api/connexion/deconnexion');
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->client->getCookieJar()->get('refresh_token', '/api/connexion'));
+        $this->client->getCookieJar()->set($nouveau);
+        $this->client->request('POST', '/api/connexion/renouveler');
         self::assertResponseStatusCodeSame(401);
 
         // Sans jeton : refusé.

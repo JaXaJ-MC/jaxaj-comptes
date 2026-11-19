@@ -8,15 +8,16 @@ Symfony 7.4 LTS, PHP 8.4, PostgreSQL (schéma `compte`, à côté du schéma `an
 
 1. « Transformer en compte » : un administrateur crée le compte d'une personne de l'annuaire (`POST /api/comptes`) ou, pour le premier, en ligne de commande. Un e-mail part avec un lien valable 7 jours.
 2. La personne choisit son mot de passe sur `/compte/activer/<lien>` (12 caractères au moins). Le lien ne sert qu'une fois.
-3. Elle se connecte (`POST /api/connexion`) et reçoit un JWT valable 15 minutes et un jeton de renouvellement valable 30 jours, à usage unique.
+3. Elle se connecte (`POST /api/connexion`) et reçoit un JWT valable 15 minutes. Le jeton de renouvellement (30 jours, à usage unique) arrive dans un cookie `HttpOnly`, `SameSite=Strict`, limité au chemin de connexion : le JavaScript n'y a pas accès.
 4. Mot de passe oublié : `/compte/mot-de-passe-oublie` envoie un lien valable deux heures, sans jamais révéler si l'adresse a un compte.
 
 ## API
 
 | Méthode | Chemin | Accès | Rôle |
 |---|---|---|---|
-| POST | `/api/connexion` | public | `{"email", "mot_de_passe"}` → `{"token", "refresh_token"}` ; 5 essais par quart d'heure |
-| POST | `/api/connexion/renouveler` | public | `{"refresh_token"}` → nouveau couple de jetons |
+| POST | `/api/connexion` | public | `{"email", "mot_de_passe"}` → `{"token"}` et cookie de renouvellement ; 5 essais par quart d'heure |
+| POST | `/api/connexion/renouveler` | public | avec le cookie → nouveau JWT et nouveau cookie |
+| POST | `/api/connexion/deconnexion` | public | invalide le jeton de renouvellement et efface le cookie |
 | GET | `/api/moi` | connecté | le compte et ses droits |
 | GET | `/api/comptes` | `comptes:admin` | tous les comptes ; `?personne=<uuid>` : le compte d'une personne de l'annuaire, s'il existe |
 | GET | `/api/expediteurs` | `comptes:admin` | les adresses d'envoi possibles |
@@ -48,7 +49,9 @@ composer install
 php bin/console lexik:jwt:generate-keypair   # clés dans config/jwt, jamais versionnées
 ```
 
-Variables dans `.env.local` (jamais versionné) : `DATABASE_URL`, `JWT_PASSPHRASE`, `URL_PUBLIQUE`, et un `MAILER_DSN_<CLE>` par expéditeur.
+Variables dans `.env.local` (jamais versionné) : `DATABASE_URL`, `JWT_PASSPHRASE`, `URL_PUBLIQUE`, `COOKIE_CHEMIN` (chemin public de la connexion, `/comptes/api/connexion` derrière le préfixe `/comptes`), `COOKIE_SECURISE` (1 en HTTPS), et un `MAILER_DSN_<CLE>` par expéditeur.
+
+Le cookie impose que l'interface et l'appli comptes soient servies sous la même origine (par exemple `https://jaxaj.maxo2.eu/` et `https://jaxaj.maxo2.eu/comptes/`).
 
 Premier administrateur :
 

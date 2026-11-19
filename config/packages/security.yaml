@@ -28,6 +28,9 @@ security:
                 interval: '15 minutes'
             refresh_jwt:
                 check_path: /api/connexion/renouveler
+                invalidate_token_on_logout: true
+            logout:
+                path: /api/connexion/deconnexion
 
         # API : un JWT valide est exigé.
         api:

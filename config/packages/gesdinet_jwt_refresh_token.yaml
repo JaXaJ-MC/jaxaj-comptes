@@ -6,3 +6,12 @@ gesdinet_jwt_refresh_token:
     hash_tokens:
         enabled: true     # seule l'empreinte est stockée
         accept_stored_in_the_clear: false
+    # Le jeton de renouvellement voyage dans un cookie inaccessible au JavaScript, limité au
+    # chemin de connexion de l'appli comptes, jamais dans le corps des réponses.
+    cookie:
+        enabled: true
+        same_site: strict
+        path: '%env(COOKIE_CHEMIN)%'
+        http_only: true
+        secure: '%env(bool:COOKIE_SECURISE)%'
+        remove_token_from_body: true
