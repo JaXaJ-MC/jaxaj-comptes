@@ -34,6 +34,10 @@ class Compte implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'derniere_connexion', nullable: true)]
     private ?\DateTimeImmutable $derniereConnexion = null;
 
+    /** Clé de l'expéditeur (compte.expediteur) qui a envoyé l'invitation. */
+    #[ORM\Column(nullable: true)]
+    private ?string $expediteur = null;
+
     #[ORM\Column(name: 'cree_le')]
     private \DateTimeImmutable $creeLe;
 
@@ -69,6 +73,9 @@ class Compte implements UserInterface, PasswordAuthenticatedUserInterface
         $this->motDePasse = $empreinte;
         $this->activeLe ??= new \DateTimeImmutable();
     }
+
+    public function getExpediteur(): ?string { return $this->expediteur; }
+    public function setExpediteur(?string $cle): void { $this->expediteur = $cle; }
 
     public function getDroits(): array { return $this->droits; }
     public function setDroits(array $droits): void { $this->droits = $droits; }

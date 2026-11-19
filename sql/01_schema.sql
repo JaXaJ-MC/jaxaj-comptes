@@ -10,6 +10,18 @@ create extension if not exists btree_gist;
 
 create schema compte;
 
+-- Adresses d'envoi des e-mails : une par association (Gmail de la mère, des chapitres…).
+-- La clé est aussi le nom du transport Symfony Mailer, dont le DSN (avec le mot de passe
+-- d'application) est dans la configuration du serveur, jamais en base : MAILER_DSN_<CLE>.
+create table compte.expediteur (
+  cle            text primary key check (cle ~ '^[a-z][a-z0-9_]*$'),
+  association_id uuid unique references annuaire.organisation (id),
+  adresse        citext not null,
+  nom            text not null,  -- nom affiché : « JaXaJ MC Béarn »
+  par_defaut     boolean not null default false
+);
+create unique index expediteur_un_par_defaut on compte.expediteur (par_defaut) where par_defaut;
+
 create table compte.compte (
   id                 uuid primary key default gen_random_uuid(),
   personne_id        uuid not null unique references annuaire.personne (id),
@@ -19,6 +31,7 @@ create table compte.compte (
   invite_le          timestamptz,
   active_le          timestamptz,  -- mot de passe choisi pour la première fois
   derniere_connexion timestamptz,
+  expediteur         text references compte.expediteur (cle),  -- adresse qui a envoyé l'invitation
   cree_le            timestamptz not null default now(),
   modifie_le         timestamptz not null default now(),
   check (email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')

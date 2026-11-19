@@ -15,6 +15,7 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Crée un compte depuis la ligne de commande, notamment le premier administrateur :
  *   bin/console compte:inviter moi@example.org --nom=Michel --prenom=Yann --droit=comptes:admin --droit=membres:admin
+ * L'option --expediteur choisit l'adresse d'envoi (mere, bearn, euskadi, productions).
  */
 #[AsCommand(name: 'compte:inviter', description: 'Transforme une personne en compte et envoie le lien d\'activation')]
 class InviterCommand extends Command
@@ -30,7 +31,8 @@ class InviterCommand extends Command
             ->addOption('personne', null, InputOption::VALUE_REQUIRED, 'UUID de la personne dans l\'annuaire')
             ->addOption('nom', null, InputOption::VALUE_REQUIRED, 'Crée la personne si elle n\'existe pas')
             ->addOption('prenom', null, InputOption::VALUE_REQUIRED)
-            ->addOption('droit', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'application:role[:perimetre]', []);
+            ->addOption('droit', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'application:role[:perimetre]', [])
+            ->addOption('expediteur', null, InputOption::VALUE_REQUIRED, 'Clé de l\'adresse d\'envoi (table compte.expediteur) ; par défaut celle marquée par défaut');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -47,9 +49,9 @@ class InviterCommand extends Command
             $output->writeln("Personne créée dans l'annuaire : $personne");
         }
         [$compte, $lien] = $this->invitations->inviter(Uuid::fromString($personne),
-            $input->getArgument('email'), $input->getOption('droit'));
-        $output->writeln(sprintf('Compte %s créé pour %s, droits : %s.', $compte->getId(), $compte->getEmail(),
-            implode(', ', $compte->getDroits()) ?: 'aucun'));
+            $input->getArgument('email'), $input->getOption('droit'), $input->getOption('expediteur'));
+        $output->writeln(sprintf('Compte %s créé pour %s, droits : %s, invitation envoyée par : %s.', $compte->getId(),
+            $compte->getEmail(), implode(', ', $compte->getDroits()) ?: 'aucun', $compte->getExpediteur()));
         $output->writeln("Lien d'activation (aussi envoyé par e-mail, valable 7 jours) :");
         $output->writeln($lien);
 

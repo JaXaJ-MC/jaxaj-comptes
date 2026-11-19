@@ -22,13 +22,17 @@ class Invitations
         private CompteRepository $comptes,
         private Jetons $jetons,
         private MailerInterface $mailer,
+        private Expediteurs $expediteurs,
         private string $urlPublique,
-        private string $expediteur,
     ) {}
 
-    /** @return array{0: Compte, 1: string} le compte et le lien d'activation */
-    public function inviter(Uuid $personne, string $email, array $droits = []): array
+    /**
+     * @param ?string $expediteur clé de l'adresse d'envoi (mere, bearn…) ; celle par défaut si vide
+     * @return array{0: Compte, 1: string} le compte et le lien d'activation
+     */
+    public function inviter(Uuid $personne, string $email, array $droits = [], ?string $expediteur = null): array
     {
+        $expediteur = $this->expediteurs->trouver($expediteur)['cle'];
         if (!$this->comptes->personneExiste($personne)) {
             throw new \InvalidArgumentException('Personne inconnue dans l\'annuaire.');
         }
@@ -47,6 +51,7 @@ class Invitations
             $compte->setEmail(trim($email));
         }
         $compte->marquerInvite();
+        $compte->setExpediteur($expediteur);
         $this->em->flush();
         $this->comptes->attribuer($compte, $droits);
 
@@ -75,13 +80,17 @@ class Invitations
         return rtrim($this->urlPublique, '/').$chemin.$jeton;
     }
 
+    /** Envoie depuis l'adresse qui a invité le compte (ou celle par défaut). */
     private function envoyer(Compte $compte, string $sujet, string $gabarit, string $lien): void
     {
-        $this->mailer->send((new TemplatedEmail())
-            ->from(Address::create($this->expediteur))
+        $expediteur = $this->expediteurs->trouver($compte->getExpediteur());
+        $email = (new TemplatedEmail())
+            ->from(new Address($expediteur['adresse'], $expediteur['nom']))
             ->to($compte->getEmail())
             ->subject($sujet)
             ->htmlTemplate($gabarit)
-            ->context(['lien' => $lien]));
+            ->context(['lien' => $lien, 'signature' => $expediteur['nom']]);
+        $email->getHeaders()->addTextHeader('X-Transport', $expediteur['cle']);
+        $this->mailer->send($email);
     }
 }

@@ -10,7 +10,7 @@ APP_ENV=test php bin/console lexik:jwt:generate-keypair --skip-if-exists -q
 
 dropdb --if-exists jaxaj_test
 createdb jaxaj_test
-for f in "$MEMBRES/sql/01_schema.sql" "$MEMBRES/sql/02_reference.sql" sql/01_schema.sql; do
+for f in "$MEMBRES/sql/01_schema.sql" "$MEMBRES/sql/02_reference.sql" sql/01_schema.sql sql/02_reference.sql; do
   psql -X -q -v ON_ERROR_STOP=1 -d jaxaj_test -f "$f" >/dev/null
 done
 echo "Base jaxaj_test prête."

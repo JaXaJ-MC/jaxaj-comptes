@@ -31,10 +31,10 @@ class ParcoursCompteTest extends WebTestCase
     }
 
     /** Crée un compte par le service et renvoie le lien d'activation. */
-    private function inviter(string $email, array $droits = []): string
+    private function inviter(string $email, array $droits = [], ?string $expediteur = null): string
     {
         [, $lien] = static::getContainer()->get(Invitations::class)
-            ->inviter($this->personne('P'.random_int(1, 1_000_000)), $email, $droits);
+            ->inviter($this->personne('P'.random_int(1, 1_000_000)), $email, $droits, $expediteur);
 
         return parse_url($lien, PHP_URL_PATH);
     }
@@ -162,5 +162,39 @@ class ParcoursCompteTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
         $this->connexion('oubli@example.org', 'nouveau mot de passe');
         self::assertResponseIsSuccessful();
+    }
+
+    public function testChoixDeLExpediteur(): void
+    {
+        // L'expéditeur se lit dans l'adresse et le nom affichés, propres à chaque association.
+        // (Le transport est choisi par l'en-tête X-Transport, que Symfony retire avant l'envoi.)
+        $de = fn (int $i = 0) => self::getMailerMessage($i)->getFrom()[0];
+
+        // Par défaut : l'association mère.
+        $this->inviter('defaut@example.org');
+        self::assertSame('JaXaJ MC', $de()->getName());
+        self::assertSame('a-completer-mere@gmail.com', $de()->getAddress());
+
+        // Invitation envoyée par le Béarn, et le mot de passe oublié repart de la même adresse.
+        $this->activer($this->inviter('bearnais@example.org', [], 'bearn'), 'mot de passe béarnais');
+        self::assertSame('a-completer-bearn@gmail.com', $de(1)->getAddress());
+        self::assertEmailHtmlBodyContains(self::getMailerMessage(1), 'JaXaJ MC Béarn');
+        $this->client->request('POST', '/compte/mot-de-passe-oublie', ['email' => 'bearnais@example.org']);
+        self::assertSame('a-completer-bearn@gmail.com', $de()->getAddress());
+
+        // Par l'API : liste des expéditeurs, choix de Productions, expéditeur inconnu refusé.
+        $this->activer($this->inviter('chef@example.org', ['comptes:admin']), 'mot de passe du chef');
+        $admin = ['HTTP_AUTHORIZATION' => 'Bearer '.$this->connexion('chef@example.org', 'mot de passe du chef')['token']];
+        $this->client->request('GET', '/api/expediteurs', server: $admin);
+        self::assertSame(['mere', 'bearn', 'euskadi', 'productions'],
+            array_column(json_decode($this->client->getResponse()->getContent(), true), 'cle'));
+        $this->client->jsonRequest('POST', '/api/comptes', ['personne' => (string) $this->personne('Prod'),
+            'email' => 'prod@example.org', 'expediteur' => 'productions'], $admin);
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame('productions', json_decode($this->client->getResponse()->getContent(), true)['expediteur']);
+        self::assertSame('a-completer-productions@gmail.com', $de()->getAddress());
+        $this->client->jsonRequest('POST', '/api/comptes', ['personne' => (string) $this->personne('X'),
+            'email' => 'x@example.org', 'expediteur' => 'paris'], $admin);
+        self::assertResponseStatusCodeSame(400);
     }
 }

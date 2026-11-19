@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Compte;
 use App\Repository\CompteRepository;
+use App\Service\Expediteurs;
 use App\Service\Invitations;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -34,9 +35,17 @@ class ApiController extends AbstractController
         return $this->json($comptes);
     }
 
+    /** Adresses d'envoi possibles, pour le choix lors de la création d'un compte. */
+    #[Route('/expediteurs', methods: ['GET'])]
+    public function expediteurs(Expediteurs $expediteurs): JsonResponse
+    {
+        return $this->json($expediteurs->liste());
+    }
+
     /**
-     * « Transformer en compte » : { "personne": uuid, "email": …, "droits": ["membres:admin"] }.
-     * Crée le compte et envoie l'e-mail pour choisir le mot de passe.
+     * « Transformer en compte » : { "personne": uuid, "email": …, "droits": ["membres:admin"],
+     * "expediteur": "bearn" }. Crée le compte et envoie l'e-mail pour choisir le mot de passe,
+     * depuis l'adresse de l'association choisie (celle par défaut si absente).
      */
     #[Route('/comptes', methods: ['POST'])]
     public function inviter(Request $requete): JsonResponse
@@ -45,6 +54,7 @@ class ApiController extends AbstractController
         $personne = $donnees['personne'] ?? '';
         $email = trim($donnees['email'] ?? '');
         $droits = $donnees['droits'] ?? [];
+        $expediteur = $donnees['expediteur'] ?? null;
         if (!Uuid::isValid($personne) || !filter_var($email, FILTER_VALIDATE_EMAIL) || !is_array($droits)) {
             return $this->json(['erreur' => 'Attendu : personne (UUID), email, droits (liste).'], 400);
         }
@@ -54,9 +64,9 @@ class ApiController extends AbstractController
             }
         }
         try {
-            [$compte] = $this->invitations->inviter(Uuid::fromString($personne), $email, $droits);
+            [$compte] = $this->invitations->inviter(Uuid::fromString($personne), $email, $droits, $expediteur);
         } catch (\InvalidArgumentException $e) {
-            return $this->json(['erreur' => $e->getMessage()], 404);
+            return $this->json(['erreur' => $e->getMessage()], str_starts_with($e->getMessage(), 'Expéditeur') ? 400 : 404);
         } catch (\LogicException $e) {
             return $this->json(['erreur' => $e->getMessage()], 409);
         }
@@ -74,6 +84,7 @@ class ApiController extends AbstractController
             'active' => $compte->estActive(),
             'invite_le' => $compte->getInviteLe()?->format(DATE_ATOM),
             'derniere_connexion' => $compte->getDerniereConnexion()?->format(DATE_ATOM),
+            'expediteur' => $compte->getExpediteur(),
             'droits' => $compte->getDroits(),
         ];
     }

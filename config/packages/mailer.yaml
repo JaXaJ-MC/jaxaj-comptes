@@ -1,3 +1,15 @@
+# Un transport par expéditeur (table compte.expediteur). Sans DSN configuré, un transport
+# n'envoie rien (null://null).
+parameters:
+    env(MAILER_DSN_MERE): 'null://null'
+    env(MAILER_DSN_BEARN): 'null://null'
+    env(MAILER_DSN_EUSKADI): 'null://null'
+    env(MAILER_DSN_PRODUCTIONS): 'null://null'
+
 framework:
     mailer:
-        dsn: '%env(MAILER_DSN)%'
+        transports:
+            mere: '%env(MAILER_DSN_MERE)%'
+            bearn: '%env(MAILER_DSN_BEARN)%'
+            euskadi: '%env(MAILER_DSN_EUSKADI)%'
+            productions: '%env(MAILER_DSN_PRODUCTIONS)%'

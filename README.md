@@ -19,7 +19,8 @@ Symfony 7.4 LTS, PHP 8.4, PostgreSQL (schéma `compte`, à côté du schéma `an
 | POST | `/api/connexion/renouveler` | public | `{"refresh_token"}` → nouveau couple de jetons |
 | GET | `/api/moi` | connecté | le compte et ses droits |
 | GET | `/api/comptes` | `comptes:admin` | tous les comptes |
-| POST | `/api/comptes` | `comptes:admin` | `{"personne": uuid, "email", "droits": [...]}` : crée le compte et envoie l'invitation |
+| GET | `/api/expediteurs` | `comptes:admin` | les adresses d'envoi possibles |
+| POST | `/api/comptes` | `comptes:admin` | `{"personne": uuid, "email", "droits": [...], "expediteur": "bearn"}` : crée le compte et envoie l'invitation |
 
 ## Ce que contient le JWT (contrat avec les autres applications)
 
@@ -43,11 +44,11 @@ Une application vérifie le jeton avec la clé publique `config/jwt/public.pem` 
 
 ```sh
 composer install
-# schémas : jaxaj-membres/sql/01_schema.sql et 02_reference.sql, puis sql/01_schema.sql
+# schémas : jaxaj-membres/sql/01_schema.sql et 02_reference.sql, puis sql/01_schema.sql et sql/02_reference.sql
 php bin/console lexik:jwt:generate-keypair   # clés dans config/jwt, jamais versionnées
 ```
 
-Variables dans `.env.local` (jamais versionné) : `DATABASE_URL`, `JWT_PASSPHRASE`, `MAILER_DSN`, `MAILER_EXPEDITEUR`, `URL_PUBLIQUE`.
+Variables dans `.env.local` (jamais versionné) : `DATABASE_URL`, `JWT_PASSPHRASE`, `URL_PUBLIQUE`, et un `MAILER_DSN_<CLE>` par expéditeur.
 
 Premier administrateur :
 
@@ -57,9 +58,17 @@ php bin/console compte:inviter moi@example.org --nom=Nom --prenom=Prénom --droi
 
 La commande affiche aussi le lien d'activation, utile tant que l'envoi d'e-mails n'est pas configuré.
 
-### Envoi des e-mails par un compte Gmail
+### Adresses d'envoi : une par association
 
-`MAILER_DSN=gmail+smtp://adresse%40gmail.com:MOTDEPASSEAPPLICATION@default`, avec un mot de passe d'application Google (compte Google avec la validation en deux étapes, puis « Mots de passe des applications »). `MAILER_EXPEDITEUR` doit être la même adresse Gmail.
+Les e-mails partent de l'adresse Gmail de l'association choisie lors de la création du compte : la mère, un chapitre ou JaXaJ Productions. Le compte garde cette adresse, et les e-mails suivants (mot de passe oublié) repartent de la même.
+
+- `compte.expediteur` (rempli par `sql/02_reference.sql`) : pour chaque association, une clé (`mere`, `bearn`, `euskadi`, `productions`), l'adresse et le nom affiché. L'un d'eux est l'expéditeur par défaut (la mère). Les adresses sont à compléter.
+- Pour chaque clé, un transport dans `config/packages/mailer.yaml`, dont le DSN est dans `.env.local` : `MAILER_DSN_BEARN=gmail+smtp://adresse%40gmail.com:MOTDEPASSEAPPLICATION@default`. Le mot de passe d'application Google ne va jamais en base ni dans git. Sans DSN, le transport n'envoie rien.
+- Choix de l'expéditeur : champ `expediteur` de `POST /api/comptes` (la liste est donnée par `GET /api/expediteurs`), ou option `--expediteur=bearn` de la commande.
+
+Ajouter un expéditeur : une ligne dans `compte.expediteur`, un transport du même nom dans `mailer.yaml` et sa variable `MAILER_DSN_<CLE>`. Une clé sans transport fait échouer l'envoi plutôt que de partir d'une autre adresse.
+
+Mot de passe d'application Google : sur le compte Gmail, activer la validation en deux étapes, puis créer un mot de passe sur https://myaccount.google.com/apppasswords.
 
 ## Tests
 

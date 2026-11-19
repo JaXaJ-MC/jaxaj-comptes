@@ -43,7 +43,7 @@ security:
 
     access_control:
         - { path: ^/api/connexion, roles: PUBLIC_ACCESS }
-        - { path: ^/api/comptes, roles: ROLE_ADMIN }
+        - { path: ^/api/(comptes|expediteurs), roles: ROLE_ADMIN }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

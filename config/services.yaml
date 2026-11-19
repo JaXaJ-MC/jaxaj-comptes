@@ -6,7 +6,6 @@ services:
         autoconfigure: true
         bind:
             string $urlPublique: '%env(URL_PUBLIQUE)%'
-            string $expediteur: '%env(MAILER_EXPEDITEUR)%'
 
     App\:
         resource: '../src/'
