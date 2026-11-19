@@ -25,12 +25,20 @@ class ApiController extends AbstractController
         return $this->json($this->decrire($compte));
     }
 
-    /** Liste des comptes (administration). */
+    /**
+     * Liste des comptes (administration). ?personne=<uuid> : le compte d'une personne de
+     * l'annuaire, s'il existe (liste vide sinon) ; sert à afficher « transformer en compte ».
+     */
     #[Route('/comptes', methods: ['GET'])]
-    public function liste(): JsonResponse
+    public function liste(Request $requete): JsonResponse
     {
+        $personne = $requete->query->get('personne');
+        if (null !== $personne && !Uuid::isValid($personne)) {
+            return $this->json(['erreur' => 'personne : UUID attendu.'], 400);
+        }
+        $critere = $personne ? ['personneId' => Uuid::fromString($personne)] : [];
         $comptes = array_map(fn (Compte $c) => $this->decrire($this->comptes->chargerDroits($c)),
-            $this->comptes->findBy([], ['email' => 'ASC']));
+            $this->comptes->findBy($critere, ['email' => 'ASC']));
 
         return $this->json($comptes);
     }

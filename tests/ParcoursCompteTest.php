@@ -141,6 +141,12 @@ class ParcoursCompteTest extends WebTestCase
         $this->client->request('GET', '/api/comptes', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
         self::assertResponseIsSuccessful();
         self::assertCount(3, json_decode($this->client->getResponse()->getContent(), true));
+
+        // Le compte d'une personne donnée, ou aucun.
+        $this->client->request('GET', '/api/comptes?personne='.$personne, server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        self::assertSame(['nouvelle@example.org'], array_column(json_decode($this->client->getResponse()->getContent(), true), 'email'));
+        $this->client->request('GET', '/api/comptes?personne='.$this->personne('Sans compte'), server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        self::assertSame([], json_decode($this->client->getResponse()->getContent(), true));
     }
 
     public function testMotDePasseOublie(): void

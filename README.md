@@ -18,7 +18,7 @@ Symfony 7.4 LTS, PHP 8.4, PostgreSQL (schéma `compte`, à côté du schéma `an
 | POST | `/api/connexion` | public | `{"email", "mot_de_passe"}` → `{"token", "refresh_token"}` ; 5 essais par quart d'heure |
 | POST | `/api/connexion/renouveler` | public | `{"refresh_token"}` → nouveau couple de jetons |
 | GET | `/api/moi` | connecté | le compte et ses droits |
-| GET | `/api/comptes` | `comptes:admin` | tous les comptes |
+| GET | `/api/comptes` | `comptes:admin` | tous les comptes ; `?personne=<uuid>` : le compte d'une personne de l'annuaire, s'il existe |
 | GET | `/api/expediteurs` | `comptes:admin` | les adresses d'envoi possibles |
 | POST | `/api/comptes` | `comptes:admin` | `{"personne": uuid, "email", "droits": [...], "expediteur": "bearn"}` : crée le compte et envoie l'invitation |
 
