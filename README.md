@@ -62,7 +62,14 @@ La commande affiche aussi le lien d'activation, utile tant que l'envoi d'e-mails
 
 Les e-mails partent de l'adresse Gmail de l'association choisie lors de la création du compte : la mère, un chapitre ou JaXaJ Productions. Le compte garde cette adresse, et les e-mails suivants (mot de passe oublié) repartent de la même.
 
-- `compte.expediteur` (rempli par `sql/02_reference.sql`) : pour chaque association, une clé (`mere`, `bearn`, `euskadi`, `productions`), l'adresse et le nom affiché. L'un d'eux est l'expéditeur par défaut (la mère). Les adresses sont à compléter.
+- `compte.expediteur` (rempli par `sql/02_reference.sql`) : pour chaque association, une clé (`mere`, `bearn`, `euskadi`, `productions`), l'adresse et le nom affiché. L'un d'eux est l'expéditeur par défaut (la mère).
+
+  | Clé | Adresse |
+  |---|---|
+  | `mere` (par défaut) | mc.jaxaj@gmail.com |
+  | `bearn` | bearn.jaxaj@gmail.com |
+  | `euskadi` | euskadi.jaxaj@gmail.com |
+  | `productions` | prod.jaxaj@gmail.com |
 - Pour chaque clé, un transport dans `config/packages/mailer.yaml`, dont le DSN est dans `.env.local` : `MAILER_DSN_BEARN=gmail+smtp://adresse%40gmail.com:MOTDEPASSEAPPLICATION@default`. Le mot de passe d'application Google ne va jamais en base ni dans git. Sans DSN, le transport n'envoie rien.
 - Choix de l'expéditeur : champ `expediteur` de `POST /api/comptes` (la liste est donnée par `GET /api/expediteurs`), ou option `--expediteur=bearn` de la commande.
 

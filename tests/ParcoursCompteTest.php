@@ -173,14 +173,14 @@ class ParcoursCompteTest extends WebTestCase
         // Par défaut : l'association mère.
         $this->inviter('defaut@example.org');
         self::assertSame('JaXaJ MC', $de()->getName());
-        self::assertSame('a-completer-mere@gmail.com', $de()->getAddress());
+        self::assertSame('mc.jaxaj@gmail.com', $de()->getAddress());
 
         // Invitation envoyée par le Béarn, et le mot de passe oublié repart de la même adresse.
         $this->activer($this->inviter('bearnais@example.org', [], 'bearn'), 'mot de passe béarnais');
-        self::assertSame('a-completer-bearn@gmail.com', $de(1)->getAddress());
+        self::assertSame('bearn.jaxaj@gmail.com', $de(1)->getAddress());
         self::assertEmailHtmlBodyContains(self::getMailerMessage(1), 'JaXaJ MC Béarn');
         $this->client->request('POST', '/compte/mot-de-passe-oublie', ['email' => 'bearnais@example.org']);
-        self::assertSame('a-completer-bearn@gmail.com', $de()->getAddress());
+        self::assertSame('bearn.jaxaj@gmail.com', $de()->getAddress());
 
         // Par l'API : liste des expéditeurs, choix de Productions, expéditeur inconnu refusé.
         $this->activer($this->inviter('chef@example.org', ['comptes:admin']), 'mot de passe du chef');
@@ -192,7 +192,7 @@ class ParcoursCompteTest extends WebTestCase
             'email' => 'prod@example.org', 'expediteur' => 'productions'], $admin);
         self::assertResponseStatusCodeSame(201);
         self::assertSame('productions', json_decode($this->client->getResponse()->getContent(), true)['expediteur']);
-        self::assertSame('a-completer-productions@gmail.com', $de()->getAddress());
+        self::assertSame('prod.jaxaj@gmail.com', $de()->getAddress());
         $this->client->jsonRequest('POST', '/api/comptes', ['personne' => (string) $this->personne('X'),
             'email' => 'x@example.org', 'expediteur' => 'paris'], $admin);
         self::assertResponseStatusCodeSame(400);
