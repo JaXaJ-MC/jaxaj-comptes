@@ -82,6 +82,38 @@ class ApiController extends AbstractController
         return $this->json($this->decrire($compte), 201);
     }
 
+    /**
+     * Modifier un compte (administration) : { "droits": [...] } remplace les droits en vigueur,
+     * { "actif": false } désactive le compte (plus de connexion), true le réactive.
+     */
+    #[Route('/comptes/{id}', methods: ['PATCH'], requirements: ['id' => '[0-9a-f-]{36}'])]
+    public function modifier(string $id, Request $requete, \Doctrine\ORM\EntityManagerInterface $em): JsonResponse
+    {
+        $compte = $this->comptes->find(Uuid::fromString($id));
+        if (!$compte) {
+            return $this->json(['erreur' => 'Compte inconnu.'], 404);
+        }
+        $donnees = json_decode($requete->getContent(), true) ?: [];
+        if (array_key_exists('droits', $donnees)) {
+            $droits = $donnees['droits'];
+            if (!is_array($droits)) {
+                return $this->json(['erreur' => 'droits : liste attendue.'], 400);
+            }
+            foreach ($droits as $droit) {
+                if (!is_string($droit) || !preg_match('/^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*(:[0-9a-f-]{36})?$/', $droit)) {
+                    return $this->json(['erreur' => "Droit invalide : « $droit » (application:role[:perimetre])."], 400);
+                }
+            }
+            $this->comptes->definirDroits($compte, array_values(array_unique($droits)));
+        }
+        if (array_key_exists('actif', $donnees)) {
+            $compte->setActif((bool) $donnees['actif']);
+            $em->flush();
+        }
+
+        return $this->json($this->decrire($this->comptes->chargerDroits($compte)));
+    }
+
     private function decrire(Compte $compte): array
     {
         return [

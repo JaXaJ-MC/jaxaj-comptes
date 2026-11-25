@@ -64,6 +64,24 @@ class CompteRepository extends ServiceEntityRepository implements UserLoaderInte
         $this->chargerDroits($compte);
     }
 
+    /**
+     * Les droits en vigueur deviennent exactement ceux donnés : les autres prennent fin hier (ou
+     * disparaissent s'ils dataient d'aujourd'hui), les nouveaux commencent aujourd'hui.
+     */
+    public function definirDroits(Compte $compte, array $droits): void
+    {
+        $connexion = $this->getEntityManager()->getConnection();
+        $retires = array_diff($this->chargerDroits($compte)->getDroits(), $droits);
+        foreach ($retires as $droit) {
+            $condition = "compte_id = :compte and periode @> current_date
+                and application || ':' || role || coalesce(':' || perimetre::text, '') = :droit";
+            $parametres = ['compte' => (string) $compte->getId(), 'droit' => $droit];
+            $connexion->executeStatement("delete from compte.attribution where $condition and lower(periode) >= current_date", $parametres);
+            $connexion->executeStatement("update compte.attribution set periode = daterange(lower(periode), current_date) where $condition", $parametres);
+        }
+        $this->attribuer($compte, $droits);
+    }
+
     public function personneExiste(Uuid $personne): bool
     {
         return (bool) $this->getEntityManager()->getConnection()->fetchOne(

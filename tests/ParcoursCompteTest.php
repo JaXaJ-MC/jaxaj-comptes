@@ -165,6 +165,17 @@ class ParcoursCompteTest extends WebTestCase
         self::assertSame(['nouvelle@example.org'], array_column(json_decode($this->client->getResponse()->getContent(), true), 'email'));
         $this->client->request('GET', '/api/comptes?personne='.$this->personne('Sans compte'), server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
         self::assertSame([], json_decode($this->client->getResponse()->getContent(), true));
+
+        // Modifier les droits d'un compte existant, le désactiver : administration seulement.
+        $this->client->request('GET', '/api/comptes?personne='.$personne, server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        $id = json_decode($this->client->getResponse()->getContent(), true)[0]['id'];
+        $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['droits' => ['membres:accueil', 'membres:admin']], ['HTTP_AUTHORIZATION' => 'Bearer '.$simple]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['droits' => ['membres:accueil', 'membres:admin']], ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        self::assertSame(['membres:accueil', 'membres:admin'], json_decode($this->client->getResponse()->getContent(), true)['droits']);
+        $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['droits' => ['membres:admin'], 'actif' => false], ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        $reponse = json_decode($this->client->getResponse()->getContent(), true);
+        self::assertSame([['membres:admin'], false], [$reponse['droits'], $reponse['actif']]);
     }
 
     public function testMotDePasseOublie(): void
