@@ -176,6 +176,15 @@ class ParcoursCompteTest extends WebTestCase
         $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['droits' => ['membres:admin'], 'actif' => false], ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
         $reponse = json_decode($this->client->getResponse()->getContent(), true);
         self::assertSame([['membres:admin'], false], [$reponse['droits'], $reponse['actif']]);
+
+        // Rattacher le compte à une autre fiche (fusion de doublons) ; pas à une fiche qui en a déjà un.
+        $autreFiche = (string) $this->personne('Doublon');
+        $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['personne' => $autreFiche], ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        self::assertSame($autreFiche, json_decode($this->client->getResponse()->getContent(), true)['personne']);
+        $this->client->request('GET', '/api/moi', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        $ficheAdmin = json_decode($this->client->getResponse()->getContent(), true)['personne'];
+        $this->client->jsonRequest('PATCH', '/api/comptes/'.$id, ['personne' => $ficheAdmin], ['HTTP_AUTHORIZATION' => 'Bearer '.$admin]);
+        self::assertResponseStatusCodeSame(409);
     }
 
     public function testMotDePasseOublie(): void

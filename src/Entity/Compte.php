@@ -56,6 +56,8 @@ class Compte implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getId(): Uuid { return $this->id; }
     public function getPersonneId(): Uuid { return $this->personneId; }
+    /** Rattacher le compte à une autre fiche (fusion de doublons dans l'annuaire). */
+    public function setPersonneId(Uuid $personne): void { $this->personneId = $personne; }
     public function getEmail(): string { return $this->email; }
     public function setEmail(string $email): void { $this->email = $email; }
     public function estActif(): bool { return $this->actif; }

@@ -84,7 +84,8 @@ class ApiController extends AbstractController
 
     /**
      * Modifier un compte (administration) : { "droits": [...] } remplace les droits en vigueur,
-     * { "actif": false } désactive le compte (plus de connexion), true le réactive.
+     * { "actif": false } désactive le compte (plus de connexion), true le réactive ;
+     * { "personne": uuid } le rattache à une autre fiche (fusion de doublons), qui ne doit pas en avoir.
      */
     #[Route('/comptes/{id}', methods: ['PATCH'], requirements: ['id' => '[0-9a-f-]{36}'])]
     public function modifier(string $id, Request $requete, \Doctrine\ORM\EntityManagerInterface $em): JsonResponse
@@ -106,10 +107,21 @@ class ApiController extends AbstractController
             }
             $this->comptes->definirDroits($compte, array_values(array_unique($droits)));
         }
+        if (array_key_exists('personne', $donnees)) {
+            $personne = $donnees['personne'];
+            if (!is_string($personne) || !Uuid::isValid($personne) || !$this->comptes->personneExiste(Uuid::fromString($personne))) {
+                return $this->json(['erreur' => 'personne : fiche inconnue.'], 404);
+            }
+            $autre = $this->comptes->findOneBy(['personneId' => Uuid::fromString($personne)]);
+            if ($autre && $autre !== $compte) {
+                return $this->json(['erreur' => 'Cette fiche a déjà un compte de connexion.'], 409);
+            }
+            $compte->setPersonneId(Uuid::fromString($personne));
+        }
         if (array_key_exists('actif', $donnees)) {
             $compte->setActif((bool) $donnees['actif']);
-            $em->flush();
         }
+        $em->flush();
 
         return $this->json($this->decrire($this->comptes->chargerDroits($compte)));
     }
